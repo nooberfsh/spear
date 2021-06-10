@@ -19,7 +19,6 @@ lazy val spear = {
 
 def spearModule(name: String): Project =
   Project(id = name, base = file(name))
-    .enablePlugins(commonPlugins: _*)
     .settings(commonSettings)
 
 lazy val `spear-utils` = spearModule("spear-utils")
@@ -41,39 +40,17 @@ lazy val `spear-local` = spearModule("spear-local")
 lazy val `spear-repl` = spearModule("spear-repl")
   .dependsOn(`spear-core` % "compile->compile;test->test")
   .dependsOn(`spear-local` % "compile->compile;test->test;compile->test")
-  .enablePlugins(JavaAppPackaging)
   .settings(runtimeConfSettings)
-  .settings(javaPackagingSettings)
   .settings(libraryDependencies ++= Dependencies.ammonite)
   .settings(libraryDependencies ++= Dependencies.scopt)
 
 lazy val `spear-examples` = spearModule("spear-examples")
   .dependsOn(`spear-core`, `spear-local`)
-  .enablePlugins(JavaAppPackaging)
   .settings(runtimeConfSettings)
-  .settings(javaPackagingSettings)
 
 lazy val `spear-docs` = spearModule("spear-docs")
   .dependsOn(`spear-core`, `spear-local`)
-  .enablePlugins(SphinxPlugin)
 
-lazy val javaPackagingSettings = {
-  import NativePackagerHelper.directory
-
-  Seq(
-    // Adds the "conf" directory into the package.
-    mappings in Universal ++= directory(baseDirectory(_.getParentFile / "conf").value),
-    // Adds the "conf" directory to runtime classpath (relative to "$app_home/../lib").
-    scriptClasspath += "../conf"
-  )
-}
-
-lazy val commonPlugins = Seq(
-  // For Scala code formatting
-  SbtScalariform,
-  // For Scala test coverage reporting
-  ScoverageSbtPlugin
-)
 
 lazy val commonSettings = {
   val buildSettings = Seq(
@@ -94,44 +71,9 @@ lazy val commonSettings = {
     testOptions in Test += Tests.Argument("-oDF")
   )
 
-  val commonDependencySettings = {
-    import net.virtualvoid.sbt.graph.Plugin.graphSettings
-
-    graphSettings ++ Seq(
-      // Avoids copying managed dependencies into `lib_managed`
-      retrieveManaged := false,
-      // Enables extra resolvers
-      resolvers ++= Dependencies.extraResolvers,
-      // Disables auto conflict resolution
-      conflictManager := ConflictManager.strict,
-      // Explicitly overrides all conflicting transitive dependencies
-      dependencyOverrides ++= Dependencies.overrides
-    )
-  }
-
-  val scalariformPluginSettings = {
-    import com.typesafe.sbt.SbtScalariform.scalariformSettings
-    import com.typesafe.sbt.SbtScalariform.ScalariformKeys.preferences
-    import scalariform.formatter.preferences.PreferencesImporterExporter.loadPreferences
-
-    scalariformSettings ++ Seq(
-      preferences := loadPreferences("scalariform.properties")
-    )
-  }
-
-  val taskSettings = Seq(
-    // Runs scalastyle before compilation
-    compile in Compile := (compile in Compile dependsOn (scalastyle in Compile toTask "")).value,
-    // Runs scalastyle before running tests
-    test in Test := (test in Test dependsOn (scalastyle in Test toTask "")).value
-  )
-
   Seq(
     buildSettings,
     commonTestSettings,
-    commonDependencySettings,
-    scalariformPluginSettings,
-    taskSettings
   ).flatten
 }
 
